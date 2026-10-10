@@ -4,8 +4,29 @@ import json
 from urllib.parse import urljoin, urlparse
 
 
+PAGE_TEXT_MAX_CHARS = 50000
+_NON_TEXT_TAGS = {'script', 'style', 'noscript', 'template', 'svg', 'head', 'title'}
+
+
 class SEOExtractor:
     """Extracts SEO-related data from HTML content"""
+
+    @staticmethod
+    def extract_page_text(soup):
+        """Visible text of the page, one line per text block, capped at PAGE_TEXT_MAX_CHARS."""
+        lines = []
+        size = 0
+        for node in soup.find_all(string=True):
+            if any(p.name in _NON_TEXT_TAGS for p in node.parents):
+                continue
+            line = node.strip()
+            if not line:
+                continue
+            lines.append(line)
+            size += len(line) + 1
+            if size >= PAGE_TEXT_MAX_CHARS:
+                break
+        return '\n'.join(lines)[:PAGE_TEXT_MAX_CHARS]
 
     @staticmethod
     def extract_basic_seo_data(soup, result):
@@ -32,6 +53,10 @@ class SEOExtractor:
         text_content = soup.get_text()
         words = re.findall(r'\b\w+\b', text_content)
         result['word_count'] = len(words)
+
+        # Readable page text (scripts, styles and head left out), capped, so a caller
+        # gets the page's words from this crawl instead of downloading it again.
+        result['text'] = SEOExtractor.extract_page_text(soup)
 
         # Extract language
         html_tag = soup.find('html')
@@ -270,6 +295,7 @@ class SEOExtractor:
             'h2': [],
             'h3': [],
             'word_count': 0,
+            'text': '',
             'meta_tags': {},
             'og_tags': {},
             'twitter_tags': {},
