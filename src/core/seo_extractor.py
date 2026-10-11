@@ -3,6 +3,8 @@ import re
 import json
 from urllib.parse import urljoin, urlparse
 
+from bs4.element import PreformattedString
+
 
 PAGE_TEXT_MAX_CHARS = 50000
 _NON_TEXT_TAGS = {'script', 'style', 'noscript', 'template', 'svg', 'head', 'title'}
@@ -17,6 +19,10 @@ class SEOExtractor:
         lines = []
         size = 0
         for node in soup.find_all(string=True):
+            # Comments, the DOCTYPE and CDATA are strings too, but not page text
+            # (a '<!DOCTYPE html>' came out as 'html', '<!-- nav -->' as 'nav').
+            if isinstance(node, PreformattedString):
+                continue
             if any(p.name in _NON_TEXT_TAGS for p in node.parents):
                 continue
             line = node.strip()
