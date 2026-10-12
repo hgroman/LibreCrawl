@@ -42,7 +42,7 @@ class SEOExtractor:
         result['title'] = title_tag.get_text().strip() if title_tag else ''
 
         # Extract meta description
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        meta_desc = soup.find('meta', attrs={'name': re.compile(r'^\s*description\s*$', re.I)})
         result['meta_description'] = meta_desc.get('content', '').strip() if meta_desc else ''
 
         # Extract headings
@@ -73,7 +73,7 @@ class SEOExtractor:
         if charset_meta:
             result['charset'] = charset_meta.get('charset', '')
         else:
-            content_type_meta = soup.find('meta', attrs={'http-equiv': 'Content-Type'})
+            content_type_meta = soup.find('meta', attrs={'http-equiv': re.compile(r'^\s*content-type\s*$', re.I)})
             if content_type_meta:
                 content = content_type_meta.get('content', '')
                 charset_match = re.search(r'charset=([^;]+)', content)
@@ -112,7 +112,7 @@ class SEOExtractor:
     @staticmethod
     def extract_opengraph_tags(soup, result):
         """Extract OpenGraph meta tags"""
-        og_metas = soup.find_all('meta', attrs={'property': re.compile(r'^og:')})
+        og_metas = soup.find_all('meta', attrs={'property': re.compile(r'^og:', re.I)})
 
         for meta in og_metas:
             property_name = meta.get('property', '')
@@ -124,7 +124,7 @@ class SEOExtractor:
     @staticmethod
     def extract_twitter_tags(soup, result):
         """Extract Twitter Card meta tags"""
-        twitter_metas = soup.find_all('meta', attrs={'name': re.compile(r'^twitter:')})
+        twitter_metas = soup.find_all('meta', attrs={'name': re.compile(r'^twitter:', re.I)})
 
         for meta in twitter_metas:
             name = meta.get('name', '')
