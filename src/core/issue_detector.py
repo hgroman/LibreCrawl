@@ -1,7 +1,7 @@
 """SEO issue detection and reporting"""
 import threading
 from fnmatch import fnmatch
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 from difflib import SequenceMatcher
 
 
@@ -166,7 +166,7 @@ class IssueDetector:
                 'issue': 'Missing Canonical URL',
                 'details': 'Page has no canonical URL specified'
             })
-        elif canonical_url != url:
+        elif _same_page_key(urljoin(url, canonical_url)) != _same_page_key(url):
             issues.append({
                 'url': url,
                 'type': 'warning',
@@ -473,3 +473,15 @@ class IssueDetector:
         """Reset detected issues"""
         with self.issues_lock:
             self.detected_issues.clear()
+
+def _same_page_key(u):
+    """A URL reduced to what identifies the page: host without www, path without a
+    trailing slash, and the query. Scheme, case of the host and the fragment are
+    ignored, so https://example.com and https://www.example.com/ are the same page
+    and a canonical pointing from one to the other is not an issue."""
+    p = urlparse((u or '').strip())
+    host = (p.hostname or '').lower()
+    if host.startswith('www.'):
+        host = host[4:]
+    path = p.path.rstrip('/')
+    return (host, path, p.query)
